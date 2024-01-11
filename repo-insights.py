@@ -14,11 +14,13 @@ def get_all_file_names(repo):
         if file_content.type == "dir":
             contents.extend(repo.get_contents(file_content.path))
         else:
-            line_count = base64.b64decode(file_content.content).decode().count('\n')
+            line_count = base64.b64decode(file_content.content).count(b'\n')
             suffix = pathlib.Path(file_content.name).suffix
             if not suffix:
                 suffix = '<no suffix>'
             files.append((file_content.name, suffix, line_count))
+            if len(files) % 10 == 0:
+                print(len(files), 'files fetched')
     return files
 
 
@@ -75,7 +77,6 @@ def generate_insights(repo_path, token):
 
     # Fetch repo data from Github
     file_tuple_list = get_all_file_names(repo)
-    pprint.pprint(file_tuple_list)
 
     # source code stats by file suffix
     suffix_based_stats(file_tuple_list)
