@@ -10,3 +10,6 @@
 
 ## Running
 `python repo-insights.py --repo <repo path> --token <access token>`
+
+
+where the access token is one that allows repo asccess.
