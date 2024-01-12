@@ -1,5 +1,6 @@
 import argparse
 import base64
+import datetime
 from github import Github, Auth
 import pandas as pd
 import pathlib
@@ -66,15 +67,12 @@ def package_managers(file_tuple_list):
     manager_indicator_files = [x[0] for x in file_tuple_list if x[0] in FILE_TO_MANAGER_MAP]
     manager_indicator_files = list(set(manager_indicator_files))
     print("Package Managers\n================")
-    print(len(manager_indicator_files), 'package managers found:', str([FILE_TO_MANAGER_MAP[x] for x in manager_indicator_files])[1:-1])
+    print(len(manager_indicator_files), 'package managers found:',
+          str([FILE_TO_MANAGER_MAP[x] for x in manager_indicator_files])[1:-1])
     print()
 
 
-def generate_insights(repo_path, token):
-    auth = Auth.Token(token)
-    g = Github(auth=auth)
-    repo = g.get_repo(repo_path)
-
+def get_file_based_insights(repo):
     # Fetch repo data from Github
     file_tuple_list = get_all_file_names(repo)
 
@@ -86,6 +84,50 @@ def generate_insights(repo_path, token):
 
     # Package managers
     package_managers(file_tuple_list)
+
+
+def get_commit_insights(repo):
+    commits = repo.get_commits()
+
+    dates = [c.commit.author.date for c in commits]
+    last_date = dates[0].date()
+    num_5_years = len([d for d in dates if d > (datetime.datetime.now(datetime.UTC) - datetime.timedelta(weeks=52*5))])
+    num_1_year = len([d for d in dates if d > (datetime.datetime.now(datetime.UTC) - datetime.timedelta(weeks=52))])
+    num_3_months = len([d for d in dates if d > (datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=91))])
+    num_1_month = len([d for d in dates if d > (datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=31))])
+
+    print("Commit Dates\n============")
+    print("Date of last commit:", last_date)
+    print("Number of commits in the recent 5 years:", num_5_years)
+    print("Number of commits in the recent year:", num_1_year)
+    print("Number of commits in the recent 3 months:", num_3_months)
+    print("Number of commits in the recent month:", num_1_month)
+    print()
+
+
+def get_contributor_insights(repo):
+    contributor_stats = repo.get_stats_contributors()
+    contributor_stats.sort(key=lambda x: x.total, reverse=True)
+    c2 = contributor_stats[0]
+    n = sum([x.total for x in contributor_stats])
+
+    print("Contributors\n============")
+    print("Number of contributors:", len(contributor_stats))
+    print("Top 5 (or less) contributors:", str([c.author.login for c in contributor_stats[:5]])[1:-1])
+
+
+def get_metadata_based_insights(repo):
+    get_commit_insights(repo)
+    get_contributor_insights(repo)
+
+
+def generate_insights(repo_path, token):
+    auth = Auth.Token(token)
+    g = Github(auth=auth)
+    repo = g.get_repo(repo_path)
+
+    get_file_based_insights(repo)
+    get_metadata_based_insights(repo)
 
     g.close()
 
